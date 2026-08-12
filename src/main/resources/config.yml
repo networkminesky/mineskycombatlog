@@ -1,0 +1,40 @@
+# Tempo de duração do combate em segundos
+combat-time: 15
+
+# Configurações da barra de progresso do combate
+bar:
+  total-segments: 18         # Quantidade de "pauzinhos" na barra
+  active-color: "&d"         # Cor do tempo restante (Rosa/Magenta igual ao seu print: &d)
+  inactive-color: "&8"       # Cor do tempo decorrido (Cinza escuro: &8)
+  symbol: "|"                # Caractere que representa os segmentos da barra
+
+# Mensagens enviadas aos jogadores (suporta cores com '&')
+messages:
+  entered-combat: "&c&lCOMBATE &8» &7Você entrou em combate! Não deslogue ou use comandos por &e%time% &7segundos."
+  left-combat: "&a&lCOMBATE &8» &7Você saiu de combate. Agora você está seguro!"
+  command-blocked: "&c&lCOMBATE &8» &7Este comando está bloqueado durante o combate!"
+  player-quit-combat: "&c&lCOMBATE &8» &e%player% &7deslogou em combate!"
+
+  # %bar% será substituído pela barra de progresso dinâmica
+  # %time% será substituído pelos segundos restantes em número inteiro
+  actionbar-format: "&fCombate: %bar% &7(%time%s)"
+
+# Comandos que serão bloqueados durante o combate (escreva em letras minúsculas e sem a barra "/")
+blocked-commands:
+  - spawn
+  - tpa
+  - tpaccept
+  - tpahere
+  - home
+  - warp
+  - lobby
+  - clan aceitar
+  - guild aceitar
+  - cla aceitar
+  - clã aceitar
+  - guilda aceitar
+  - clas aceitar
+  - guilda aceitar
+  - guilds aceitar
+  - msguild aceitar
+  - msguilda aceitar

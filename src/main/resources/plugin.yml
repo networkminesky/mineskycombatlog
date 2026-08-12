@@ -1,0 +1,15 @@
+name: MineSkyCombatLog
+version: '${version}'
+
+main: net.mineskycombatlog.MineSkyCombatLog
+api-version: '26.1'
+load: POSTWORLD
+folia-supported: true
+
+commands:
+  combatlog:
+    permission: mineskycombatlog.admin
+
+permission:
+  mineskycombatlog.admin:
+    default: op
