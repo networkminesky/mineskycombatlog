@@ -12,12 +12,15 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -26,6 +29,8 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener {
 
     private final Map<UUID, Long> combatMap = new ConcurrentHashMap<>();
     private final Map<UUID, ScheduledTask> taskMap = new ConcurrentHashMap<>();
+    private final Map<UUID, UUID> lastAttackerMap = new ConcurrentHashMap<>();
+    private final Set<UUID> bypassTag = ConcurrentHashMap.newKeySet();
     private final List<String> blockedCommands = new CopyOnWriteArrayList<>();
 
     private int combatTimeSeconds;
@@ -34,11 +39,29 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener {
     private String barInactiveColor;
     private String barSymbol;
 
+    private boolean shuttingDown = false;
+
     @Override
     public void onEnable() {
+        shuttingDown = false;
         saveDefaultConfig();
         loadConfiguration();
         getServer().getPluginManager().registerEvents(this, this);
+    }
+
+    @Override
+    public void onDisable() {
+        shuttingDown = true;
+
+        for (ScheduledTask task : taskMap.values()) {
+            if (task != null) {
+                task.cancel();
+            }
+        }
+
+        taskMap.clear();
+        combatMap.clear();
+        lastAttackerMap.clear();
     }
 
     private void loadConfiguration() {
@@ -76,6 +99,10 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener {
         Entity victimEntity = event.getEntity();
         Entity damagerEntity = event.getDamager();
 
+        if (bypassTag.contains(victimEntity.getUniqueId())) {
+            return;
+        }
+
         Player victimPlayer = null;
         Player attackerPlayer = null;
 
@@ -96,22 +123,20 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener {
         }
 
         if (victimPlayer != null && attackerPlayer != null && !victimPlayer.equals(attackerPlayer)) {
-            tagPlayer(victimPlayer);
-            tagPlayer(attackerPlayer);
+            tagPlayer(victimPlayer, attackerPlayer.getUniqueId());
+            tagPlayer(attackerPlayer, victimPlayer.getUniqueId());
             return;
         }
-
         if (victimPlayer != null && isHostile(actualDamager)) {
-            tagPlayer(victimPlayer);
+            tagPlayer(victimPlayer, actualDamager.getUniqueId());
             return;
         }
 
         if (attackerPlayer != null && isHostile(victimEntity)) {
-            tagPlayer(attackerPlayer);
+            tagPlayer(attackerPlayer, victimEntity.getUniqueId());
             return;
         }
     }
-
 
     private boolean isHostile(Entity entity) {
         if (entity == null) return false;
@@ -135,14 +160,50 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
-        if (isInCombat(player)) {
-            player.setHealth(0.0);
 
+        if (shuttingDown || Bukkit.isStopping()) {
             combatMap.remove(uuid);
             ScheduledTask task = taskMap.remove(uuid);
             if (task != null) {
                 task.cancel();
             }
+            lastAttackerMap.remove(uuid);
+            return;
+        }
+
+        if (isInCombat(player)) {
+            combatMap.remove(uuid);
+            ScheduledTask task = taskMap.remove(uuid);
+            if (task != null) {
+                task.cancel();
+            }
+
+            UUID attackerUuid = lastAttackerMap.remove(uuid);
+
+            bypassTag.add(uuid);
+            try {
+                if (attackerUuid != null) {
+                    Entity attackerEntity = Bukkit.getEntity(attackerUuid);
+                    if (attackerEntity != null && !attackerEntity.isDead()) {
+                        EntityDamageByEntityEvent damageEvent = new EntityDamageByEntityEvent(
+                                attackerEntity,
+                                player,
+                                EntityDamageEvent.DamageCause.ENTITY_ATTACK,
+                                99999.0
+                        );
+                        player.setLastDamageCause(damageEvent);
+
+                        if (attackerEntity instanceof Player) {
+                            player.setKiller((Player) attackerEntity);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            } finally {
+                bypassTag.remove(uuid);
+            }
+
+            player.setHealth(0.0);
 
             String quitMsg = getConfig().getString("messages.player-quit-combat", "&c&lCOMBATE &8» &e%player% &7deslogou em combate!");
             quitMsg = formatColor(quitMsg.replace("%player%", player.getName()));
@@ -150,11 +211,28 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener {
         }
     }
 
-    private void tagPlayer(Player player) {
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        UUID uuid = player.getUniqueId();
+
+        combatMap.remove(uuid);
+        lastAttackerMap.remove(uuid);
+        ScheduledTask task = taskMap.remove(uuid);
+        if (task != null) {
+            task.cancel();
+        }
+    }
+
+    private void tagPlayer(Player player, UUID attackerUuid) {
         UUID uuid = player.getUniqueId();
         boolean wasInCombat = isInCombat(player);
         long expireTime = System.currentTimeMillis() + (combatTimeSeconds * 1000L);
         combatMap.put(uuid, expireTime);
+
+        if (attackerUuid != null) {
+            lastAttackerMap.put(uuid, attackerUuid);
+        }
 
         if (!wasInCombat) {
             String msg = getConfig().getString("messages.entered-combat", "&c&lCOMBATE &8» &7Você entrou em combate!");
@@ -168,6 +246,7 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener {
                     scheduledTask.cancel();
                     combatMap.remove(uuid);
                     taskMap.remove(uuid);
+                    lastAttackerMap.remove(uuid);
                     return;
                 }
 
@@ -175,6 +254,7 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener {
                 if (currentExpire == null) {
                     scheduledTask.cancel();
                     taskMap.remove(uuid);
+                    lastAttackerMap.remove(uuid);
                     return;
                 }
 
@@ -184,6 +264,7 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener {
                     scheduledTask.cancel();
                     combatMap.remove(uuid);
                     taskMap.remove(uuid);
+                    lastAttackerMap.remove(uuid);
 
                     String msgLeft = getConfig().getString("messages.left-combat", "&a&lCOMBATE &8» &7Você saiu de combate.");
                     player.sendMessage(formatColor(msgLeft));
@@ -203,6 +284,7 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener {
             }, () -> {
                 combatMap.remove(uuid);
                 taskMap.remove(uuid);
+                lastAttackerMap.remove(uuid);
             }, 1L, 20L);
 
             taskMap.put(uuid, task);
@@ -239,6 +321,7 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener {
         }
         if (System.currentTimeMillis() > expireTime) {
             combatMap.remove(player.getUniqueId());
+            lastAttackerMap.remove(player.getUniqueId());
             return false;
         }
         return true;
