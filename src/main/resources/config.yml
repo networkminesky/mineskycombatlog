@@ -14,10 +14,12 @@ messages:
   left-combat: "&a&lCOMBATE &8» &7Você saiu de combate. Agora você está seguro!"
   command-blocked: "&c&lCOMBATE &8» &7Este comando está bloqueado durante o combate!"
   player-quit-combat: "&c&lCOMBATE &8» &e%player% &7deslogou em combate!"
+  fly-disabled: "&c&lCOMBATE &8» &7Seu modo de voo foi desativado por entrar em combate!"
 
   # %bar% será substituído pela barra de progresso dinâmica
   # %time% será substituído pelos segundos restantes em número inteiro
   actionbar-format: "&fCombate: %bar% &7(%time%s)"
+  actionbar-left: "&a&l✔ &aVocê saiu de combate!"
 
 # Comandos que serão bloqueados durante o combate (escreva em letras minúsculas e sem a barra "/")
 blocked-commands:
@@ -28,13 +30,28 @@ blocked-commands:
   - home
   - warp
   - lobby
-  - clan aceitar
-  - guild aceitar
-  - cla aceitar
-  - clã aceitar
-  - guilda aceitar
-  - clas aceitar
-  - guilda aceitar
-  - guilds aceitar
-  - msguild aceitar
-  - msguilda aceitar
+  - guild
+  - clan
+  - guild
+  - cla
+  - clã
+  - guilda
+  - clas
+  - guildas
+  - guilds
+  - msguild
+  - msguilda
+  - rtp
+  - mundos
+  - warps
+  - fly
+  - event
+  - eventos
+  - go
+  - pwarp
+  - pw
+  - arena
+  - caixas
+  - playerwarps
+  - back
+  - wild
