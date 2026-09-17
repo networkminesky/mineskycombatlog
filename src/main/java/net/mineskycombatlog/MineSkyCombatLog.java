@@ -19,6 +19,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityToggleGlideEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
@@ -345,6 +346,16 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener, Mine
                 String msg = getConfig().getString("messages.command-blocked", "&c&lCOMBATE &8» &7Este comando está bloqueado durante o combate!");
                 player.sendMessage(formatColor(msg));
             }
+        }
+    }
+
+    @EventHandler
+    public void onElytra(EntityToggleGlideEvent e) {
+        if(isInCombat(e.getEntity().getUniqueId())) {
+            e.setCancelled(true);
+
+            String msg = getConfig().getString("messages.elytra-blocked", "&c&lCOMBATE &8» &7O uso de elytras esta desativado durante o combate!");
+            e.getEntity().sendMessage(formatColor(msg));
         }
     }
 
