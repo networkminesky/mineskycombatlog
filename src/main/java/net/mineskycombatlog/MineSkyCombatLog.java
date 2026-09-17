@@ -304,21 +304,6 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener, Mine
             tagPlayer(attackerPlayer, victimPlayer.getUniqueId());
             return;
         }
-
-        if (victimPlayer != null && isHostile(actualDamager)) {
-            tagPlayer(victimPlayer, actualDamager.getUniqueId());
-            return;
-        }
-
-        if (attackerPlayer != null && isHostile(victimEntity)) {
-            tagPlayer(attackerPlayer, victimEntity.getUniqueId());
-            return;
-        }
-    }
-
-    private boolean isHostile(Entity entity) {
-        if (entity == null) return false;
-        return entity instanceof org.bukkit.entity.Enemy;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -331,8 +316,6 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener, Mine
             event.setCancelled(true);
             player.setFlying(false);
             player.setAllowFlight(false);
-            String msg = getConfig().getString("messages.fly-disabled", "&c&lCOMBATE &8» &7Você não pode voar durante o combate!");
-            player.sendMessage(formatColor(msg));
         }
     }
 
@@ -434,8 +417,8 @@ public final class MineSkyCombatLog extends JavaPlugin implements Listener, Mine
             if (player.isFlying() || player.getAllowFlight()) {
                 player.setFlying(false);
                 player.setAllowFlight(false);
-                String msg = getConfig().getString("messages.fly-disabled", "&c&lCOMBATE &8» &7Seu voo foi desativado por entrar em combate!");
-                player.sendMessage(formatColor(msg));
+//                String msg = getConfig().getString("messages.fly-disabled", "&c&lCOMBATE &8» &7Seu voo foi desativado por entrar em combate!");
+//                player.sendMessage(formatColor(msg));
             }
         }, null);
     }
